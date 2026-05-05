@@ -26,22 +26,21 @@ class Structure:
         if path_str not in self.data:
             self.data[path_str] = len(self.data_in_order)
             self.data_in_order.append(path_str)
+
     def add_directory(self, path, extensions : Set[str] = None):
         extensions = extensions or DEFAULT_IMAGE_EXTENSIONS
         for dir_, _, files in os.walk(path):
             for file_name in files:
                 if extensions is None or file_name.endswith(tuple(extensions)):
-                    rel_dir = os.path.relpath(dir_, path)
-                    rel_file = os.path.join(rel_dir, file_name)
-                    self.add_path_string(rel_file)
+                    rel_file = Path(dir_).relative_to(path) / file_name
+                    rel_file_str = str(rel_file)
+                    self.add_path_string(rel_file_str)
     def sorted(self, key_extractor: Callable[[str], int]) -> Structure:
         new_structure = Structure()
         new_structure.data = dict(self.data)
-        new_structure.data_in_order = ([i for i in self.data_in_order]
-                                       .sort(key=lambda s: key_extractor(self._str_to_path_str(s))))
+        new_structure.data_in_order = sorted(self.data_in_order, key=lambda s: key_extractor(self._str_to_path_str(s)))
         return new_structure
     def sort_extractor(self, path: Path) -> int:
-        print(self.data)
         return self.data[self._path_to_str(path)]
     def get_mapping(self, data: "Structure") -> dict[str, str]:
         ...

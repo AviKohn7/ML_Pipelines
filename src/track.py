@@ -2,11 +2,11 @@ import sys
 
 from src.pipeline.default_modules import LongiSegSegmentModule, ITKRegistrationModule, TrackingModule
 from src.pipeline.pipeline_architecture import *
-
+from src.util import directory_arg
 
 def add_registration(pipeline: Pipeline, source_config: Configuration) -> Configuration:
     segmentation = LongiSegSegmentModule()
-    segmentation.set_config(no_tta = True, fold=0, tr="nnUNetTrainerNoLongi") #fast segmentation
+    segmentation.set_config(no_tta = True, fold=0, trainer="nnUNetTrainerNoLongi") #fast segmentation
     segmentation_config = segmentation.get_configurations()[0]
     pipeline.add_configuration(segmentation_config, (0, source_config))
 
@@ -18,8 +18,8 @@ def add_registration(pipeline: Pipeline, source_config: Configuration) -> Config
 
 def get_pipeline(folder: Path, registration_needed: bool = True) -> Pipeline:
     pipeline = Pipeline()
-    source = FolderSource()
-    source.set_config(folder = folder, sort_by="")
+    source = ImageFolderSource()
+    source.set_config(folder = folder, sort_by="(?<=_)[^_.]+(?=\\.)")
     source_config = source.get_configurations()[0]
     pipeline.add_configuration(source_config)
     images_config = source_config
@@ -27,7 +27,7 @@ def get_pipeline(folder: Path, registration_needed: bool = True) -> Pipeline:
         images_config = add_registration(pipeline, source_config)
 
     segmentation = LongiSegSegmentModule()
-    segmentation.set_config(tr="LongiSegTrainerDiffWeighting")
+    segmentation.set_config(trainer="LongiSegTrainerDiffWeighting")
     segmentation_config = segmentation.get_configurations()[0]
     pipeline.add_configuration(segmentation_config, (0, images_config))
 
@@ -41,15 +41,15 @@ def get_parser():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_folder", type=path_arg, required=True, help="Input folder for data")
-    parser.add_argument("-o", "--output_folder", type=path_arg, required=True, help="Output folder for data")
-    parser.add_argument("-r", "-register", action="store_true", help="Register each image with preceding image")
+    parser.add_argument("-o", "--output_folder", type=directory_arg, required=True, help="Output folder for data")
+    parser.add_argument("-r", "--register", action="store_true", help="Register each image with preceding image")
     return parser
 
 if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args(sys.argv[1:])
-    GLOBAL_SETTINGS["final_output_folder"] = args.output_folder
-    GLOBAL_SETTINGS["temp_output_folder"] = GLOBAL_SETTINGS["output_folder"] / 'temp'
-    GLOBAL_SETTINGS["module_output_folder"] = GLOBAL_SETTINGS["output_folder"] / 'module_output'
+    GLOBAL_SETTINGS.set(dict(final_output_folder = args.output_folder,
+                              temp_output_folder = args.output_folder / 'temp',
+                              module_output_folder = args.output_folder / 'module_output'))
     pipeline = get_pipeline(args.input_folder, registration_needed = args.register)
     pipeline.execute() #hope

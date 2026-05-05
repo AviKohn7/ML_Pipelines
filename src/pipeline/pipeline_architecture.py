@@ -5,7 +5,7 @@ from collections import defaultdict, deque
 from typing import Union, Optional, Type, Any
 from uuid import uuid4
 
-from pipeline_util import *
+from .pipeline_util import *
 from src.pipeline.data_types import Regex
 from src.util import regex_arg, path_arg
 from contextvars import ContextVar
@@ -39,7 +39,7 @@ class Configuration:
         self.function = function
         self.input_types = input_types
         self.output = output_type
-        self.config_types = Namespace(**{key: value for key, value in vars(module.config_types) if key not in irrelevant_config})
+        self.config_types = Namespace(**{key: value for key, value in vars(module.config_types).items() if key not in irrelevant_config})
         self.config = module.config
 
 class ConfigError(ValueError):
@@ -79,7 +79,7 @@ class Module:
         ...
     
     def _get_true_type(self, value, type):
-        if isinstance(value, type):
+        if isinstance(value, Type):
             return value
         elif type in string_mappers:
             return string_mappers[type](value)
@@ -105,7 +105,7 @@ class Module:
     @name.setter
     def name(self, value):
         self._name = value
-        self.id = value + self.uuid
+        self.id = value + str(self.uuid)
             
     
 #To be used in a UI
@@ -121,7 +121,7 @@ class Pipeline:
         for index, input in inputs:
             if input not in self.configurations.keys():
                 raise ValueError(f"All inputs given must already be in the pipeline, input {input.name} at {index} is not")
-            if not isinstance(input.output, configuration.input_types[index]):
+            if not issubclass(input.output, configuration.input_types[index]):
                 raise ValueError(
                     f"Input {input.name} at {index} has an output of type {input.output}, but {configuration.input_types[index]} is required")
             if configuration in self.configurations and self.configurations[configuration].inputs[index] is not None:
@@ -231,7 +231,28 @@ class FolderSource(Source):
         except Exception as e:
             raise ValueError(f"Can't sort folder based on regex. Do all files with that extension match the regex?")
     def get_configurations(self) -> List[Configuration]:
-        return [self.create_configuration("Patient source", self.get_data, output=DataTransport)]
+        return [self.create_configuration("Folder source", self.get_data, output=DataTransport)]
+
+class ImageFolderSource(Source):
+    def __init__(self):
+        super().__init__("Source")
+        self._add_config_options(folder = Path,
+                                 filter_by = regex_arg,
+                                 sort_by = regex_arg,
+                                 extensions = List)
+
+    def get_data(self) -> ImageDataTransport:
+        if self.config.folder is None:
+            raise ConfigError("Must include data folder")
+        transport = ImageFolderDataTransport(True, Path(self.config_types.folder), extensions=self.config_types.extensions)
+        try:
+            return transport.sorted(lambda x: int(re.search(self.config_types.sort_by, str(x)).group()))
+        except Exception as e:
+            raise ValueError(f"Can't sort folder based on regex. Do all files with that extension match the regex?")
+    def get_configurations(self) -> List[Configuration]:
+        return [self.create_configuration("Folder source", self.get_data, output=ImageDataTransport)]
+
+
 
 class SegmentModule(Module):
     def __init__(self):

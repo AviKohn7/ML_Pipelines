@@ -9,7 +9,7 @@ import torch
 from longiseg.inference.predict_from_raw_data_longi import LongiSegPredictor
 from longiseg.utilities.file_path_utilities import get_output_folder
 
-from pipeline_architecture import *
+from .pipeline_architecture import *
 from scipy.ndimage import label, center_of_mass
 from enum import StrEnum
 
@@ -170,7 +170,7 @@ class TrackingModule(Module):
     def __init__(self):
         super().__init__("Tracking")
         #intensity_background_threshold is not inclusive
-        self._add_config_options(intensity_background_threshold=float, size_change_threshold=float, max_movable_distance=floar)
+        self._add_config_options(intensity_background_threshold=float, size_change_threshold=float, max_movable_distance=float)
         self.set_config(intensity_background_threshold=0, size_change_threshold=.1, max_movable_distance=50)
 
     def map(self, segmentations: ImageDataTransport, images: ImageDataTransport) -> DataTransport:
@@ -389,6 +389,6 @@ class TrackingModule(Module):
 
     def get_configurations(self):
         return [
-            self.create_configuration("Track marked objects", self.map, SortedDataTransport,
-                          SortedDataTransport, output=DataTransport)
+            self.create_configuration("Track marked objects", self.map, ImageDataTransport,
+                          ImageDataTransport, output=DataTransport)
         ]

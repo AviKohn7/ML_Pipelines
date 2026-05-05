@@ -170,7 +170,7 @@ class FolderDataTransport(DataTransport):
         return ((DataTransport.get_image_from_file(p), str(p)) for p in paths)
 
     def get_file_paths(self) -> List[Path]:
-        paths = [p for p in Path(self.folder_path).rglob("*")
+        paths = [p.relative_to(self.folder_path) for p in Path(self.folder_path).rglob("*")
                  if p.is_file() and (self.extensions is None or p.name.lower().endswith(tuple(self.extensions)))]
         paths.sort(key=self.structure.sort_extractor)
         return paths

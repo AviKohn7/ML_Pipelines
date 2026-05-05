@@ -26,13 +26,14 @@ class LongiSegSegmentModule(SegmentModule):
     def __init__(self):
         super().__init__()
         self.name = "LongiSeg Segment"
-        self._add_config_options(plans=str, folds=List,
+        self._add_config_options(plans=str, folds=str,
                                  configuration=str,
                                  dataset_name=str,
                                  trainer=str,
                                  step_size=functools.partial(bounded_float, min=0, max=1),
                                  disable_tta=bool, save_probabilities=bool, npp=int, nps=int,
                                  device=value_set_arg('cuda', 'cpu', 'mps'))
+        self.set_config(plans='nnUNetPlans', step_size=0.5, disable_tta=False, save_probabilities=False, npp=3, nps=3, device='cpu', folds="all")
     #per-patient segment
     def segment(self, segmentations: ImageDataTransport) -> ImageDataTransport:
         config = self.config

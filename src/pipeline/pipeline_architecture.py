@@ -140,17 +140,26 @@ class Pipeline:
 
     def has_cycle(self):
         visited = set()
-        def DFSUtil(v):
+        rec_stack = set()  # Nodes in the current DFS path
+
+        def dfs(v):
             visited.add(v)
-            # Recur for all the vertices adjacent to this vertex
+            rec_stack.add(v)
+
             for neighbor, index in self.configurations[v].outputs:
-                if neighbor in visited or DFSUtil(neighbor):
+                if neighbor not in visited:
+                    if dfs(neighbor):
+                        return True
+                elif neighbor in rec_stack:
+                    # Back edge found ? cycle detected
                     return True
+
+            rec_stack.remove(v)
             return False
 
-        for elem in self.configurations.keys():
-            if elem not in visited:
-                if DFSUtil(elem):
+        for node in self.configurations:
+            if node not in visited:
+                if dfs(node):
                     return True
         return False
 
@@ -225,9 +234,9 @@ class FolderSource(Source):
     def get_data(self) -> DataTransport:
         if self.config.folder is None:
             raise ConfigError("Must include data folder")
-        transport = FolderDataTransport(True, Path(self.config_types.folder), extensions=self.config_types.extensions)
+        transport = FolderDataTransport(True, Path(self.config.folder), extensions=self.config.extensions)
         try:
-            return transport.sorted(lambda x: int(re.search(self.config_types.sort_by, str(x)).group()))
+            return transport.sorted(lambda x: int(re.search(self.config.sort_by, str(x)).group()))
         except Exception as e:
             raise ValueError(f"Can't sort folder based on regex. Do all files with that extension match the regex?")
     def get_configurations(self) -> List[Configuration]:
@@ -244,11 +253,11 @@ class ImageFolderSource(Source):
     def get_data(self) -> ImageDataTransport:
         if self.config.folder is None:
             raise ConfigError("Must include data folder")
-        transport = ImageFolderDataTransport(True, Path(self.config_types.folder), extensions=self.config_types.extensions)
+        transport = ImageFolderTransport(True, Path(self.config.folder), extensions=self.config.extensions)
         try:
-            return transport.sorted(lambda x: int(re.search(self.config_types.sort_by, str(x)).group()))
+            return transport.sorted(lambda x: int(re.search(self.config.sort_by, str(x)).group()))
         except Exception as e:
-            raise ValueError(f"Can't sort folder based on regex. Do all files with that extension match the regex?")
+            raise ValueError(f"Can't sort folder based on regex {self.config.sort_by}. Do all files with that extension match the regex?", e)
     def get_configurations(self) -> List[Configuration]:
         return [self.create_configuration("Folder source", self.get_data, output=ImageDataTransport)]
 

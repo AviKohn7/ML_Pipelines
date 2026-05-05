@@ -275,9 +275,9 @@ def email_arg(string, email_regex: re.Pattern = _email_regex):
 def regex_arg(string: str):
     try:
         re.compile(string)
-        return str
+        return string
     except re.error:
-        raise argparse.ArgumentTypeError(f"{str} is not a valid regex.")
+        raise argparse.ArgumentTypeError(f"{string} is not a valid regex.")
 
 def value_set_mapper(string, *values, case_sensitive=False, number=False):
     cased = values if case_sensitive else [val.lower() for val in values]

@@ -6,7 +6,7 @@ from src.util import directory_arg
 
 def add_registration(pipeline: Pipeline, source_config: Configuration) -> Configuration:
     segmentation = LongiSegSegmentModule()
-    segmentation.set_config(no_tta = True, fold=0, trainer="nnUNetTrainerNoLongi") #fast segmentation
+    segmentation.set_config(no_tta = True, fold=0, trainer="nnUNetTrainerNoLongi", dataset_name="Dataset012_msLarge", configuration="3d_fullres") #fast segmentation
     segmentation_config = segmentation.get_configurations()[0]
     pipeline.add_configuration(segmentation_config, (0, source_config))
 
@@ -27,7 +27,7 @@ def get_pipeline(folder: Path, registration_needed: bool = True) -> Pipeline:
         images_config = add_registration(pipeline, source_config)
 
     segmentation = LongiSegSegmentModule()
-    segmentation.set_config(trainer="LongiSegTrainerDiffWeighting")
+    segmentation.set_config(trainer="LongiSegTrainerDiffWeighting", dataset_name="Dataset012_msLarge", configuration="3d_fullres", folds=0)
     segmentation_config = segmentation.get_configurations()[0]
     pipeline.add_configuration(segmentation_config, (0, images_config))
 

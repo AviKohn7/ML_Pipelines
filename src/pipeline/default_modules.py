@@ -19,21 +19,27 @@ from longiseg.training.LongiSegTrainer.variants.longitudinal.LongiSegTrainerDiff
 
 from longiseg.inference import predict_from_raw_data_longi
 
-from src.util import bounded_int, bounded_float, value_set_arg, safe_remove_tree
+from src.util import bounded_int, bounded_float, value_set_arg, safe_remove_tree, split_multi_ext
 import json
+import shutil
+
+def folds_arg(s: str | int) -> List:
+    if isinstance(s, int): 
+        return [s]
+    return [i if i == 'all' else int(i) for i in s.split(' ')]
 
 class LongiSegSegmentModule(SegmentModule):
     def __init__(self):
         super().__init__()
         self.name = "LongiSeg Segment"
-        self._add_config_options(plans=str, folds=str,
+        self._add_config_options(plans=str, folds=folds_arg,
                                  configuration=str,
                                  dataset_name=str,
                                  trainer=str,
                                  step_size=functools.partial(bounded_float, min=0, max=1),
                                  disable_tta=bool, save_probabilities=bool, npp=int, nps=int,
                                  device=value_set_arg('cuda', 'cpu', 'mps'))
-        self.set_config(plans='nnUNetPlans', step_size=0.5, disable_tta=False, save_probabilities=False, npp=3, nps=3, device='cpu', folds="all")
+        self.set_config(plans='nnUNetPlans', step_size=0.5, disable_tta=False, save_probabilities=False, npp=3, nps=3, device='cuda', folds="all")
     #per-patient segment
     def segment(self, segmentations: ImageDataTransport) -> ImageDataTransport:
         config = self.config
@@ -57,12 +63,12 @@ class LongiSegSegmentModule(SegmentModule):
                                       device=device,
                                       verbose=False,
                                       verbose_preprocessing=False,
-                                      allow_tqdm=False)
+                                      allow_tqdm=True)
         predictor.initialize_from_trained_model_folder(
             model_folder,
             config.folds
         )
-        folder = segmentations.get_folder_path()
+        folder = self.copy_segmentations_to_identifier(segmentations, self._temp_folder())
         output_folder = self._module_folder()
         patient_file = self.get_patient_file(segmentations, self._temp_folder())
         #todo: make sure that this actually works with registration output
@@ -78,14 +84,21 @@ class LongiSegSegmentModule(SegmentModule):
 
         return ImageFolderTransport(False, output_folder, structure_of=segmentations)
 
+    def copy_segmentations_to_identifier(self, segmentations: ImageDataTransport, output_folder: Path = None):
+        output_folder = output_folder or self._temp_folder()
+        for p in segmentations.get_file_paths():
+            name, ext = split_multi_ext(p)
+            shutil.copy(p, output_folder / (name + "_0000" + ext))
+        return output_folder
+
     def get_patient_file(self, segmentations: ImageDataTransport, output_folder: Path = None) -> str:
         folder = segmentations.get_folder_path()
         output_folder = output_folder or folder
-
-        path_names = [p.stem for p in segmentations.get_file_paths()]
+        path_names = [split_multi_ext(p)[0] for p in segmentations.get_file_paths()]
         patient_tr = {
             folder.stem: path_names
         }
+
         file_path = str(output_folder / "generated_patients.json")
 
         with open(file_path, "w") as f:

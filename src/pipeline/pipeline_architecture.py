@@ -210,13 +210,22 @@ class Pipeline:
                 sinks.add(node)
 
     def _run_configuration(self, node: Configuration, input_values: List[DataTransport], output_folder: Path, module_output_folder: Path, temp_output_folder: Path):
+        folders = output_folder / node.id, module_output_folder / node.id, temp_output_folder / node.id
         GLOBAL_SETTINGS.set({
-            "final_output_folder": output_folder / node.id,
-            "module_output_folder": module_output_folder / node.id,
-            "temp_output_folder": temp_output_folder / node.id,
+            "final_output_folder": folders[0],
+            "module_output_folder": folders[1],
+            "temp_output_folder": folders[2],
         })
-        return node.function(*input_values) #assume input validation is already done when creating pipeline,
+        for p in folders[1:]:
+            p.mkdir(parents=True, exist_ok=True)
+        result = node.function(*input_values) #assume input validation is already done when creating pipeline,
         # any issues will just be errors
+        
+        for p in folders[1:]:
+            if not any(p.iterdir()):
+                p.rmdir()
+
+        return result
 
 
 

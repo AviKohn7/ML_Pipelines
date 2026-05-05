@@ -37,8 +37,10 @@ class Structure:
                     self.add_path_string(rel_file_str)
     def sorted(self, key_extractor: Callable[[str], int]) -> Structure:
         new_structure = Structure()
-        new_structure.data = dict(self.data)
         new_structure.data_in_order = sorted(self.data_in_order, key=lambda s: key_extractor(self._str_to_path_str(s)))
+        new_structure.data = {}
+        for i, elem in enumerate(new_structure.data_in_order):
+            new_structure.data[elem] = i
         return new_structure
     def sort_extractor(self, path: Path) -> int:
         return self.data[self._path_to_str(path)]
@@ -167,9 +169,9 @@ class FolderDataTransport(DataTransport):
         return ((DataTransport.get_image_from_file(p), str(p)) for p in paths)
 
     def get_file_paths(self) -> List[Path]:
-        paths = [p.relative_to(self.folder_path) for p in Path(self.folder_path).rglob("*")
+        paths = [p for p in Path(self.folder_path).rglob("*")
                  if p.is_file() and (self.extensions is None or p.name.lower().endswith(tuple(self.extensions)))]
-        paths.sort(key=self.structure.sort_extractor)
+        paths.sort(key=lambda p: self.structure.sort_extractor(p.relative_to(self.folder_path)))
         return paths
 
     def get_folder_path(self) -> Path:
@@ -182,7 +184,7 @@ class FolderDataTransport(DataTransport):
         super().augment_structure(obj)
         structure_to_copy = obj if isinstance(obj, Structure) else obj.get_structure()
         if not self.structure.files_identical(structure_to_copy):
-            raise ValueError("Can't augment structure unless identical files")
+            raise ValueError(f"Can't augment structure unless identical files. This has {self.structure.data_in_order} while the input has {structure_to_copy.data_in_order}" )
         self.structure = Structure(structure_to_copy)
 
 class ImageFolderTransport(FolderDataTransport, ImageDataTransport):

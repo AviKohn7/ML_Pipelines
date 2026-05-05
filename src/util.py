@@ -363,6 +363,21 @@ _Colors = dict(
 def print_style(msg, *colors):
     print("".join(_Colors[color.upper()] for color in colors) + msg + _Colors['ENDC'])
 
+def split_multi_ext(path):
+    p = Path(path)
+    stem = p.name
+    exts = ''
+    
+    # Loop to peel off all extensions
+    while True:
+        stem_part, ext = os.path.splitext(stem)
+        if ext == '':
+            break
+        exts = ext + exts  # accumulate extensions
+        stem = stem_part
+    return stem, exts
+
+
 if __name__ == "__main__":
     print("Util should not be ran unless debugging")
     def get_lines_r(f):

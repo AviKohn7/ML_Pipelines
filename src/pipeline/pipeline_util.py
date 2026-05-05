@@ -41,6 +41,7 @@ class Structure:
                                        .sort(key=lambda s: key_extractor(self._str_to_path_str(s))))
         return new_structure
     def sort_extractor(self, path: Path) -> int:
+        print(self.data)
         return self.data[self._path_to_str(path)]
     def get_mapping(self, data: "Structure") -> dict[str, str]:
         ...
@@ -67,7 +68,7 @@ class DataTransport:
     def __init__(self, is_user_input: bool):
         self.is_user_input = is_user_input
 
-    def sorted(self, sort_key_extractor: Callable[[str], int] = None) -> "SortedDataTransport":
+    def sorted(self, sort_key_extractor: Callable[[str], int] = None) -> "DataTransport":
         raise NotImplementedError("Use child classes of DataTransport, this should be overridden in all children")
 
     def get_data(self) -> Generator[Tuple[NDArray, str]]:
@@ -91,8 +92,7 @@ class DataTransport:
         :return:
         :raises: ValueError if files don't match 1-1
         """
-        if self.is_user_input:
-            raise RuntimeError("Cannot augment structure of user input")
+        ...
         
     def destroy_object(self):
         ...
@@ -101,9 +101,6 @@ class DataTransport:
     def get_image_from_file(image_path) -> NDArray:
         img = itk.imread(image_path)
         return itk.array_from_image(img)
-
-class SortedDataTransport(DataTransport):
-    ...
 
 @dataclass
 class ImageMetadata:
@@ -151,7 +148,7 @@ class ImageDataTransport(DataTransport):
         itk.imwrite(new_img, path)
 
 class FolderDataTransport(DataTransport):
-    def __init__(self, is_user_input: bool, folder_path: Path, extensions: Set[str] = None, structure_of: DataTransport=None):
+    def __init__(self, is_user_input: bool, folder_path: Path, extensions: Set[str] = None, structure_of: DataTransport =None):
         super().__init__(is_user_input)
         if not folder_path.is_dir():
             raise ValueError("FolderDataTransport requires an existing folder as input")
@@ -162,8 +159,9 @@ class FolderDataTransport(DataTransport):
         if structure_of is not None:
             self.augment_structure(structure_of)
 
-    def sorted(self, sort_key_extractor: Callable[[str], int] = None) -> "SortedDataTransport":
-        return SortedFolderTransport(sort_key_extractor, self.is_user_input, self.folder_path, self.extensions)
+    def sorted(self, sort_key_extractor: Callable[[str], int] = None) -> "FolderDataTransport":
+        new_structure = self.structure.sorted(sort_key_extractor)
+        return type(self)(self.is_user_input, self.folder_path, self.extensions, new_structure)
 
     def get_data(self) -> Generator[Tuple[NDArray, str]]:
         paths = self.get_file_paths() #in order
@@ -183,15 +181,10 @@ class FolderDataTransport(DataTransport):
 
     def augment_structure(self, obj: "DataTransport"):
         super().augment_structure(obj)
-        structure_to_copy = obj.get_structure()
+        structure_to_copy = obj if isinstance(obj, Structure) else obj.get_structure()
         if not self.structure.files_identical(structure_to_copy):
             raise ValueError("Can't augment structure unless identical files")
         self.structure = Structure(structure_to_copy)
-
-class SortedFolderTransport(FolderDataTransport, SortedDataTransport):
-    def __init__(self, sort_key_extractor: Callable[[str], int], is_user_input: bool, folder_path: Path, extensions: Set[str] = DEFAULT_IMAGE_EXTENSIONS):
-        super().__init__(is_user_input, folder_path, extensions)
-        self.structure = self.get_structure().sorted(sort_key_extractor)
 
 class ImageFolderTransport(FolderDataTransport, ImageDataTransport):
     def __init__(self, is_user_input: bool, folder_path: Path, extensions: Set[str] = None, structure_of: DataTransport=None):

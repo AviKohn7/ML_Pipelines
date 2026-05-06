@@ -221,7 +221,6 @@ class TrackingModule(Module):
                 labeled, highest_id, state, removed_state = self.relabel(labeled, prev_labeled, centroids, prev_centroids,
                                               state, highest_id, image, voxel_sizes)
                 states[image_path.stem] = removed_state + state
-            print(state)
             ImageDataTransport.save_image(self._module_folder() / image_path.name, labeled, metadata)
             prev_labeled, prev_feature_count, prev_centroids = labeled, feature_count, centroids
         
@@ -251,8 +250,9 @@ class TrackingModule(Module):
     def relabel(self, labeled, prev_labeled, centroids, prev_centroids, prev_states, highest_id, image: NDArray, spacing):
         image_path = (image > self.config.intensity_background_threshold)
         centroid_status, prev_centroid_status, highest_id = self.match_centroids(image_path, centroids, prev_centroids, prev_states, spacing, highest_id, prev_labeled)
-        lookup = np.array([0] + [st.id for st in centroid_status])
-        relabeled = labeled[lookup]
+        lookup = np.array([0] + [st.id for st in centroid_status], dtype=labeled.dtype)
+        print(len(centroids), len(centroid_status), [st.id for st in centroid_status])
+        relabeled = lookup[labeled]
         return relabeled, highest_id, centroid_status, [status for status in prev_centroid_status if status.status == ChangeType.DISAPPEARED]
 
 

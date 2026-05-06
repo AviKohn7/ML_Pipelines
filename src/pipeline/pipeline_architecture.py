@@ -28,6 +28,9 @@ GLOBAL_SETTINGS.set({
     "temp_output_folder": None #for any temporary output needed during calculation
 })
 
+modules = defaultdict(list)
+def add_module(section, cls):
+    modules[section].append(cls)
 
 class Configuration:
     """

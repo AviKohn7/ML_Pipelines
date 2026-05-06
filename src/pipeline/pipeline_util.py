@@ -101,13 +101,13 @@ class DataTransport:
     @staticmethod
     def get_image_from_file(image_path) -> NDArray:
         img = itk.imread(image_path)
-        return itk.array_from_image(img)
+        return  itk.array_from_image(img)
 
 @dataclass
 class ImageMetadata:
-    spacing: List[int]
-    origin: List[int]
-    direction: List[float]
+    spacing: List[float]
+    origin: List[float]
+    direction: List[List[float]]
 
 class ImageDataTransport(DataTransport):
     def get_metadatas(self) -> List[ImageMetadata]:
@@ -132,7 +132,7 @@ class ImageDataTransport(DataTransport):
                 img = itk.imread(str(path))
                 spacing = list(img.GetSpacing())
                 origin = list(img.GetOrigin())
-                direction = list(img.GetDirection())
+                direction = np.array(img.GetDirection(), dtype=float).tolist()
                 return ImageMetadata(spacing, origin, direction)
             except ValueError:
                 warnings.warn("Could not read spacing from {} using itk, defaulting to unit spacing".format(path))
@@ -145,7 +145,11 @@ class ImageDataTransport(DataTransport):
         new_img = itk.image_from_array(image)
         new_img.SetSpacing(metadata.spacing)
         new_img.SetOrigin(metadata.origin)
-        new_img.SetDirection(metadata.direction)
+
+        direction_array = np.array(metadata.direction, dtype=float)
+        direction_matrix = itk.matrix_from_array(direction_array)
+        new_img.SetDirection(direction_matrix)
+
         itk.imwrite(new_img, path)
 
 class FolderDataTransport(DataTransport):

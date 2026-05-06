@@ -37,10 +37,30 @@ def get_pipeline(folder: Path, registration_needed: bool = True) -> Pipeline:
 
     return pipeline
 
+def get_single_track_pipeline(image_folder: Path, segmentations_folder: Path) -> Pipeline:
+    pipeline = Pipeline()
+
+    images = ImageFolderSource()
+    images.set_config(folder = image_folder, sort_by="(?<=_)[^_.]+(?=\\.)")
+    images_config = images.get_configurations()[0]
+    pipeline.add_configuration(images_config)
+
+    segmentation = ImageFolderSource()
+    segmentation.set_config(folder = segmentations_folder, sort_by="(?<=_)[^_.]+(?=\\.)")
+    segmentation_config = segmentation.get_configurations()[0]
+    pipeline.add_configuration(segmentation_config)
+
+    tracker = TrackingModule()
+    tracker_config = tracker.get_configurations()[0]
+    pipeline.add_configuration(tracker_config, (0, segmentation_config), (1, images_config))
+
+    return pipeline
+
 def get_parser():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_folder", type=path_arg, required=True, help="Input folder for data")
+    parser.add_argument("-si", "--segmentations_folder", type=path_arg, default=None, help="Input folder for data")
     parser.add_argument("-o", "--output_folder", type=directory_arg, required=True, help="Output folder for data")
     parser.add_argument("-r", "--register", action="store_true", help="Register each image with preceding image")
     return parser
@@ -51,5 +71,5 @@ if __name__ == "__main__":
     GLOBAL_SETTINGS.set(dict(final_output_folder = args.output_folder,
                               temp_output_folder = args.output_folder / 'temp',
                               module_output_folder = args.output_folder / 'module_output'))
-    pipeline = get_pipeline(args.input_folder, registration_needed = args.register)
+    pipeline = get_pipeline(args.input_folder, registration_needed = args.register) if args.segmentations_folder is None else get_single_track_pipeline(args.input_folder, args.segmentations_folder)
     pipeline.execute() #hope

@@ -178,7 +178,14 @@ class Status:
             "actual_change_in_volume": self.actual_change_in_volume,
         })
 
-
+class StrFallbackEncoder(json.JSONEncoder):
+    def default(self, o):
+        try:
+            # Try the default serializer first
+            return super().default(o)
+        except TypeError:
+            # If it fails, fallback to string
+            return str(o)
 #todo: remove output?
 class TrackingModule(Module):
     def __init__(self):
@@ -188,7 +195,7 @@ class TrackingModule(Module):
         self.set_config(intensity_background_threshold=0, size_change_threshold=.1, max_movable_distance=50)
 
     def map(self, segmentations: ImageDataTransport, images: ImageDataTransport) -> DataTransport:
-        structure = np.ones((3, 3))  # full connectivity, even diagonals
+        structure = np.ones((3, 3, 3))  # full connectivity, even diagonals
         states = {}
         state = None
         highest_id = 0
@@ -203,23 +210,23 @@ class TrackingModule(Module):
             image, image_path = image_tuple
             image_path = Path(image_path)
             voxel_sizes = metadata.spacing
-
-            labeled, feature_count, centroids = self.label_by_connected(segmentation[0], structure)
+            print(f"Tracking {image_path.name}")
+            labeled, feature_count, centroids = self.label_by_connected(segmentation, structure)
             if state is None: #first
                 volumes = self.get_volume(labeled, voxel_sizes, feature_count)
-                state = [Status(i+1, ChangeType.NEW, volumes[i], None) for i in range(len(volumes))]
+                state = [Status(i+1, ChangeType.NEW, volumes[i], None) for i in volumes.keys()]
                 highest_id = len(volumes)
                 states[image_path.stem] = state
             else:
                 labeled, highest_id, state, removed_state = self.relabel(labeled, prev_labeled, centroids, prev_centroids,
                                               state, highest_id, image, voxel_sizes)
                 states[image_path.stem] = removed_state + state
-
+            print(state)
             ImageDataTransport.save_image(self._module_folder() / image_path.name, labeled, metadata)
             prev_labeled, prev_feature_count, prev_centroids = labeled, feature_count, centroids
-        with open(self._module_folder() / "state_changes.json") as file:
-            json.dump(states, file)
-
+        
+        with open(self._module_folder() / "state_changes.json", 'w') as file:
+            json.dump(states, file, cls=StrFallbackEncoder)
         return FolderDataTransport(False, self._module_folder())
 
 

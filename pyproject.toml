@@ -4,8 +4,9 @@ version = "0.0.0"
 requires-python = ">=3.11"
 dependencies = [
     "itk",
-    "LongiSeg @ git+https://github.com/MIC-DKFZ/LongiSeg.git"
+    "LongiSeg @ git+https://github.com/MIC-DKFZ/LongiSeg.git",
+    "PyQt6"
 ]
 
 [project.scripts]
-track = "src/track.py"
+track = "src.track:main"

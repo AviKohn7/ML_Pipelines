@@ -381,3 +381,9 @@ class RegistrationModule(Module):
             self.create_configuration("Register with other image", self.register_with_given, Union[Path, str], ImageDataTransport,
                           Union[Path, str, None], Optional[ImageDataTransport], output=ImageDataTransport),
         ]
+
+# Register modules for the UI
+add_module("Sources", FolderSource)
+add_module("Sources", ImageFolderSource)
+add_module("Segmentation", SegmentModule)
+add_module("Registration", RegistrationModule)

@@ -111,6 +111,8 @@ class LongiSegSegmentModule(SegmentModule):
     def get_configurations(self) -> List[Configuration]:
         return [self.create_configuration("Per-patient Segmentation", self.segment,ImageDataTransport, output=ImageDataTransport)]
 
+add_module("Segmentation", LongiSegSegmentModule)
+
 #todo: add option for parameter file
 class ITKRegistrationModule(RegistrationModule):
     def __init__(self):
@@ -151,6 +153,7 @@ class ITKRegistrationModule(RegistrationModule):
             log_to_console=False,
         )
         return result
+add_module("Registration", ITKRegistrationModule)
 
 
 class ChangeType(StrEnum):
@@ -413,3 +416,4 @@ class TrackingModule(Module):
             self.create_configuration("Track marked objects", self.map, ImageDataTransport,
                           ImageDataTransport, output=DataTransport)
         ]
+add_module("Tracking", TrackingModule)

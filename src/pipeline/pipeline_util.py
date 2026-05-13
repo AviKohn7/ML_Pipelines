@@ -111,10 +111,10 @@ class ImageMetadata:
 
 class ImageDataTransport(DataTransport):
     def get_metadatas(self) -> List[ImageMetadata]:
-        return [self._get_voxel_metadata(p) for p in self.get_file_paths()]
+        return [self.get_voxel_metadata(p) for p in self.get_file_paths()]
 
     @staticmethod
-    def _get_voxel_metadata(path) -> ImageMetadata:
+    def get_voxel_metadata(path) -> ImageMetadata:
         ext = "".join(path.suffixes).lower()
 
         itk_formats = {".nii", ".nii.gz", ".mha", ".mhd", ".nrrd", ".tif", ".tiff"}

@@ -1,0 +1,136 @@
+There are 2 cases in the source folder
+I am process 0 out of 1 (max process ID is 0, we start counting with 0!)
+There are 2 cases that I would like to predict
+
+Predicting MS_130_01:
+perform_everything_on_device: True
+sending off prediction to background worker for resampling and export
+done with MS_130_01
+
+Predicting MS_130_02:
+perform_everything_on_device: True
+WARNING: The parameter "FixedInternalImagePixelType", requested at entry number 0, does not exist at all.
+  The default value "float" is used instead.
+WARNING: The parameter "MovingInternalImagePixelType", requested at entry number 0, does not exist at all.
+  The default value "float" is used instead.
+Installing all components.
+InstallingComponents was successful.
+
+ELASTIX version: 5.3.1
+Git revision SHA: ef34ca99d84c226d1bb72d534c8a201526a5c034
+Git revision date: Tue Mar 17 16:49:15 2026 +0100
+Command line options from ElastixBase:
+-threads  unspecified, so all available threads are used
+WARNING: The parameter "UseDirectionCosines", requested at entry number 0, does not exist at all.
+  The default value "true" is used instead.
+
+WARNING: The option "UseDirectionCosines" was not found in your parameter file.
+  From elastix 4.8 it defaults to true!
+This may change the behavior of your registrations considerably.
+
+Command line options from TransformBase:
+-t0       unspecified, so no initial transform used
+
+Reading images...
+Reading images took 0 ms.
+
+WARNING: the fixed pyramid schedule is not fully specified!
+  A default pyramid schedule is used.
+WARNING: the moving pyramid schedule is not fully specified!
+  A default pyramid schedule is used.
+WARNING: The parameter "AutomaticTransformInitialization", requested at entry number 0, does not exist at all.
+  The default value "false" is used instead.
+WARNING: The parameter "AutomaticTransformInitializationMethod", requested at entry number 0, does not exist at all.
+  The default value "GeometricalCenter" is used instead.
+Transform parameters are initialized as: [0, 0, 0, 0, 0, 0]
+Scales are estimated automatically.
+Scales for transform parameters are: [7817, 6521, 7817, 1, 1, 1]
+Initialization of all components (before registration) took: 5 ms.
+Preparation of the image pyramids took: 146 ms.
+
+Resolution: 0
+WARNING: The parameter "ShowExactMetricValue", requested at entry number 0, does not exist at all.
+  The default value "false" is used instead.
+WARNING: The parameter "UseMultiThreadingForMetrics", requested at entry number 0, does not exist at all.
+  The default value "true" is used instead.
+WARNING: The parameter "ErodeFixedMask", requested at entry number 0, does not exist at all.
+  The default value "true" is used instead.
+WARNING: The parameter "ErodeMovingMask", requested at entry number 0, does not exist at all.
+  The default value "true" is used instead.
+Setting the fixed masks took: 14 ms.
+Setting the moving masks took: 19 ms.
+WARNING: The parameter "FixedImageBSplineInterpolationOrder", requested at entry number 0, does not exist at all.
+  The default value "1" is used instead.
+WARNING: The parameter "UseRandomSampleRegion", requested at entry number 0, does not exist at all.
+  The default value "false" is used instead.
+WARNING: The parameter "NumberOfHistogramBins", requested at entry number 0, does not exist at all.
+  The default value "32" is used instead.
+WARNING: The parameter "NumberOfFixedHistogramBins", requested at entry number 0, does not exist at all.
+  The default value "32" is used instead.
+WARNING: The parameter "NumberOfMovingHistogramBins", requested at entry number 0, does not exist at all.
+  The default value "32" is used instead.
+WARNING: The parameter "FixedLimitRangeRatio", requested at entry number 0, does not exist at all.
+  The default value "0.01" is used instead.
+WARNING: The parameter "MovingLimitRangeRatio", requested at entry number 0, does not exist at all.
+  The default value "0.01" is used instead.
+WARNING: The parameter "FixedKernelBSplineOrder", requested at entry number 0, does not exist at all.
+  The default value "0" is used instead.
+WARNING: The parameter "MovingKernelBSplineOrder", requested at entry number 0, does not exist at all.
+  The default value "3" is used instead.
+WARNING: The parameter "UseFastAndLowMemoryVersion", requested at entry number 0, does not exist at all.
+  The default value "true" is used instead.
+WARNING: The parameter "UseJacobianPreconditioning", requested at entry number 0, does not exist at all.
+  The default value "false" is used instead.
+WARNING: The parameter "FiniteDifferenceDerivative", requested at entry number 0, does not exist at all.
+  The default value "false" is used instead.
+WARNING: The parameter "SP_A", requested at entry number 0, does not exist at all.
+  The default value "20" is used instead.
+
+WARNING: You have set MaximumNumberOfSamplingAttempts to 8.
+  This functionality is known to cause problems (stack overflow) for large values.
+  If elastix stops or segfaults for no obvious reason, reduce this value.
+  You may select the RandomSparseMask image sampler to fix mask-related problems.
+
+WARNING: The parameter "SigmoidInitialTime", requested at entry number 0, does not exist at all.
+  The default value "0" is used instead.
+WARNING: The parameter "MaxBandCovSize", requested at entry number 0, does not exist at all.
+  The default value "192" is used instead.
+WARNING: The parameter "NumberOfBandStructureSamples", requested at entry number 0, does not exist at all.
+  The default value "10" is used instead.
+WARNING: The parameter "UseAdaptiveStepSizes", requested at entry number 0, does not exist at all.
+  The default value "true" is used instead.
+WARNING: The parameter "UseConstantStep", requested at entry number 0, does not exist at all.
+  The default value "false" is used instead.
+WARNING: The parameter "MaximumStepLengthRatio", requested at entry number 0, does not exist at all.
+  The default value "1" is used instead.
+WARNING: The parameter "MaximumStepLength", requested at entry number 0, does not exist at all.
+  The default value "1" is used instead.
+WARNING: The parameter "NumberOfGradientMeasurements", requested at entry number 0, does not exist at all.
+  The default value "0" is used instead.
+WARNING: The parameter "NumberOfJacobianMeasurements", requested at entry number 0, does not exist at all.
+  The default value "1000" is used instead.
+WARNING: The parameter "SigmoidScaleFactor", requested at entry number 0, does not exist at all.
+  The default value "0.1" is used instead.
+Elastix initialization of all components (for this resolution) took: 34 ms.
+Initialization of AdvancedMattesMutualInformation metric took: 79 ms.
+Starting automatic parameter estimation for AdaptiveStochasticGradientDescent ...
+WARNING: The parameter "ASGDParameterEstimationMethod", requested at entry number 0, does not exist at all.
+  The default value "Original" is used instead.
+  Computing JacobianTerms ...
+
+itk::ExceptionObject (0x5633a2f37570)
+Location: "ElastixTemplate - Run()" 
+File: /work/build/cp311-abi3-linux_x86_64/_deps/elx-src/Common/itkComputeJacobianTerms.hxx
+Line: 484
+Description: ITK ERROR: ComputeJacobianTerms(0x7fbdc4000b90): No valid voxels (0/1000) found to estimate the AdaptiveStochasticGradientDescent parameters.
+
+Error occurred during actual registration.
+
+
+sending off prediction to background worker for resampling and export
+done with MS_130_02
+image /data/kohna/data/Pipeline/MS_130/MS_130_01.nii.gz ImageMetadata(spacing=[1.0, 1.0, 1.0], origin=[96.0, 132.0, -78.0], direction=[[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]])
+mask /data/kohna/data/Pipeline/output/module_output/LongiSeg Segment2d9efc0d-f9c5-4a33-843c-345d09bf1ef3/MS_130_01.nii.gz ImageMetadata(spacing=[1.0, 1.0, 1.0], origin=[96.0, 132.0, -78.0], direction=[[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]])
+image /data/kohna/data/Pipeline/MS_130/MS_130_02.nii.gz ImageMetadata(spacing=[1.0, 1.0, 1.0], origin=[96.0, 132.0, -78.0], direction=[[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]])
+mask /data/kohna/data/Pipeline/output/module_output/LongiSeg Segment2d9efc0d-f9c5-4a33-843c-345d09bf1ef3/MS_130_02.nii.gz ImageMetadata(spacing=[1.0, 1.0, 1.0], origin=[96.0, 132.0, -78.0], direction=[[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0]])
+[<class 'itk.itkImagePython.itkImageF3'>, <class 'itk.itkImagePython.itkImageF3'>, <class 'itk.itkImagePython.itkImageUC3'>, <class 'itk.itkImagePython.itkImageUC3'>]

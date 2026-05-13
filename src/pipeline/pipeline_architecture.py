@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from argparse import Namespace
 from collections import defaultdict, deque
-from typing import Union, Optional, Type, Any
+from typing import Union, Optional, Type, Any, get_origin
 from uuid import uuid4
 
 from .pipeline_util import *
@@ -82,7 +82,7 @@ class Module:
         ...
     
     def _get_true_type(self, value, type):
-        if isinstance(value, Type):
+        if (isinstance(type, Type) or get_origin(type) is not None ) and isinstance(value, type):
             return value
         elif type in string_mappers:
             return string_mappers[type](value)
@@ -311,6 +311,7 @@ class RegistrationModule(Module):
 
         data_paths = data.get_file_paths()
         mask_paths = mask.get_file_paths() if mask is not None else None
+
         fixed_image = self.get_image(data_paths[0])
         fixed_mask = self.get_mask(mask_paths[0]) if mask_paths is not None else None
         self.save_image(fixed_image, output_folder / data_paths[0].name)
@@ -320,7 +321,7 @@ class RegistrationModule(Module):
             moving_mask = self.get_mask(mask_paths[i]) if mask_paths is not None else None
             result = self._register(fixed_image, moving_image, fixed_mask, moving_mask, initial_object)
             fixed_image, fixed_mask = result, moving_mask
-            self.save_image(result, output_folder / data_paths[0].name)
+            self.save_image(result, output_folder / data_paths[i].name)
         return ImageFolderTransport(False, output_folder, structure_of=data)
     def register_with_first(self, data: ImageDataTransport, mask: ImageDataTransport | None = None) -> ImageDataTransport:
         """
@@ -333,7 +334,7 @@ class RegistrationModule(Module):
         ...
         initial_object = self.get_initial_objects()
         output_folder = self._module_folder()
-
+        
         data_paths = data.get_file_paths()
         mask_paths = mask.get_file_paths() if mask is not None else None
         fixed_image = self.get_image(data_paths[0])
@@ -344,7 +345,7 @@ class RegistrationModule(Module):
             moving_image = self.get_image(data_paths[i])
             moving_mask = self.get_mask(mask_paths[i]) if mask_paths is not None else None
             result = self._register(fixed_image, moving_image, fixed_mask, moving_mask, initial_object)
-            self.save_image(result, output_folder / data_paths[0].name)
+            self.save_image(result, output_folder / data_paths[i].name)
         return ImageFolderTransport(False, output_folder, structure_of=data)
 
     def register_with_given(self, fixed_image: Path | str, data: ImageDataTransport, fixed_mask: Path | str | None = None, mask: ImageDataTransport | None = None) -> ImageDataTransport:
@@ -369,7 +370,7 @@ class RegistrationModule(Module):
             moving_image = self.get_image(data_paths[i])
             moving_mask = self.get_mask(mask_paths[i]) if mask_paths is not None else None
             result = self._register(fixed_image, moving_image, fixed_mask, moving_mask, initial_object)
-            self.save_image(result, output_folder / data_paths[0].name)
+            self.save_image(result, output_folder / data_paths[i].name)
         return ImageFolderTransport(False, output_folder, structure_of=data)
 
     def get_configurations(self):

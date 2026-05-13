@@ -6,12 +6,13 @@ from src.util import directory_arg
 
 def add_registration(pipeline: Pipeline, source_config: Configuration) -> Configuration:
     segmentation = LongiSegSegmentModule()
-    segmentation.set_config(no_tta = True, fold=0, trainer="nnUNetTrainerNoLongi", dataset_name="Dataset012_msLarge", configuration="3d_fullres") #fast segmentation
+    segmentation.set_config(disable_tta = True, folds=0, trainer="nnUNetTrainerNoLongi", dataset_name="Dataset012_msLarge", configuration="3d_fullres") #fast segmentation
     segmentation_config = segmentation.get_configurations()[0]
     pipeline.add_configuration(segmentation_config, (0, source_config))
 
     registration = ITKRegistrationModule()
-    registration_config = registration.get_configuration("Register with preceding image")
+    registration.set_config(parameter_maps_names=["rigid", "affine", "bspline"], resolutions=3)
+    registration_config = registration.get_configurations()[0]
     pipeline.add_configuration(registration_config, (0, source_config), (1, segmentation_config))
 
     return registration_config

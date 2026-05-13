@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import heapq
+import warnings
 
 import itk
 from itk.itkMeanSquaresImageToImageMetricv4Python import itkMeanSquaresImageToImageMetricv4IF3IF3 as itkMeanSquaresImageToImageMetricv4
@@ -44,18 +45,19 @@ class LongiSegSegmentModule(SegmentModule):
     def segment(self, segmentations: ImageDataTransport) -> ImageDataTransport:
         config = self.config
         model_folder = get_output_folder(config.dataset_name, config.trainer, config.plans, config.configuration)
-        if config.device == 'cpu':
-            # let's allow torch to use hella threads
-            import multiprocessing
-            torch.set_num_threads(multiprocessing.cpu_count())
-            device = torch.device('cpu')
-        elif config.device == 'cuda':
-            # multithreading in torch doesn't help LongiSeg if run on GPU
-            torch.set_num_threads(1)
-            torch.set_num_interop_threads(1)
-            device = torch.device('cuda')
-        else:
-            device = torch.device('mps')
+        try:
+            if config.device == 'cpu':
+                # let's allow torch to use hella threads
+                import multiprocessing
+                torch.set_num_threads(multiprocessing.cpu_count())
+            elif config.device == 'cuda':
+                # multithreading in torch doesn't help LongiSeg if run on GPU
+                torch.set_num_threads(1)
+                torch.set_num_interop_threads(1)
+        except RuntimeError:
+            warnings.warn("Failed to change device, can only change device once per process")
+        finally:
+            device = torch.device(config.device)
         predictor = LongiSegPredictor(tile_step_size=config.step_size,
                                       use_gaussian=True,
                                       use_mirroring=not config.disable_tta,
@@ -118,15 +120,18 @@ class ITKRegistrationModule(RegistrationModule):
     def __init__(self):
         super().__init__()
         self.name = "ITK Registration"
-        self._add_config_options(parameter_maps_names=List[str],
+        self._add_config_options(parameter_maps_names=list, #todo: was List[str]. Fix pipeline type checking
                                  resolutions=int)
 
     def get_parameter_object(self):
         parameter_object = itk.ParameterObject.New()
 
         resolutions = self.config.resolutions
-        for name in self.config.parameter_maps_names():
+        for name in self.config.parameter_maps_names:
             parameter_map = itk.ParameterObject.GetDefaultParameterMap(name, resolutions)
+            parameter_map["ErodeFixedMask"] = ["false"]
+            parameter_map["ErodeMovingMask"] = ["false"]
+            parameter_map["ImageSampler"] = ["RandomSparseMask"]
             parameter_object.AddParameterMap(parameter_map)
         return parameter_object
 
@@ -135,7 +140,23 @@ class ITKRegistrationModule(RegistrationModule):
         return itk.imread(path, itk.F)
 
     def get_mask(self, path):
-        return itk.imread(path, itk.F)
+        mask = itk.imread(path)
+        mask_array = itk.array_from_image(mask)
+    
+        # Pick only the label we want
+        mask_array = (mask_array != 0).astype(np.uint8)
+
+        if np.sum(mask_array) == 0:
+            return None
+
+        mask_itk = itk.image_from_array(mask_array, is_vector=False)
+
+        # Match geometry to the original mask or fixed image
+        mask_itk.SetOrigin(mask.GetOrigin())
+        mask_itk.SetSpacing(mask.GetSpacing())
+        mask_itk.SetDirection(mask.GetDirection())
+
+        return mask_itk
 
     def get_initial_objects(self):
         return self.get_parameter_object()
@@ -153,6 +174,7 @@ class ITKRegistrationModule(RegistrationModule):
             log_to_console=False,
         )
         return result
+
 add_module("Registration", ITKRegistrationModule)
 
 
@@ -217,7 +239,7 @@ class TrackingModule(Module):
             labeled, feature_count, centroids = self.label_by_connected(segmentation, structure)
             if state is None: #first
                 volumes = self.get_volume(labeled, voxel_sizes, feature_count)
-                state = [Status(i+1, ChangeType.NEW, volumes[i], None) for i in volumes.keys()]
+                state = [Status(i, ChangeType.NEW, volumes[i], None) for i in volumes.keys()]
                 highest_id = len(volumes)
                 states[image_path.stem] = state
             else:

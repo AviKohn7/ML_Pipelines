@@ -48,7 +48,7 @@ class PortItem(QGraphicsPathItem):
         else:
             self.label.setPos(self.port_radius + 5, -self.label.boundingRect().height() / 2)
 
-    def scenePos(self):
+    def connection_scene_pos(self):
         # Return the center of the flat edge of the semicircle
         if self.is_input:
             return self.parent_module.mapToScene(self.pos() + QPointF(-self.port_radius, 0))
@@ -107,28 +107,31 @@ class ModuleItem(QGraphicsRectItem):
 
     def _update_ports_and_size(self):
         # Clear existing ports and their connections
+        scene = self.scene()
         for port in self.input_ports:
             for connection in list(port.connections): # Iterate over a copy
-                if connection.start_port == port:
-                    self.scene().removeItem(connection)
+                if scene:
+                    scene.removeItem(connection)
+                if connection.start_port == port and connection.end_port:
                     connection.end_port.connections.remove(connection)
-                elif connection.end_port == port:
-                    self.scene().removeItem(connection)
+                elif connection.end_port == port and connection.start_port:
                     connection.start_port.connections.remove(connection)
-            self.scene().removeItem(port.label)
-            self.scene().removeItem(port)
+            port.connections.clear()
+            if scene:
+                scene.removeItem(port)
         self.input_ports.clear()
 
         if self.output_port:
             for connection in list(self.output_port.connections):
-                if connection.start_port == self.output_port:
-                    self.scene().removeItem(connection)
+                if scene:
+                    scene.removeItem(connection)
+                if connection.start_port == self.output_port and connection.end_port:
                     connection.end_port.connections.remove(connection)
-                elif connection.end_port == self.output_port:
-                    self.scene().removeItem(connection)
+                elif connection.end_port == self.output_port and connection.start_port:
                     connection.start_port.connections.remove(connection)
-            self.scene().removeItem(self.output_port.label)
-            self.scene().removeItem(self.output_port)
+            self.output_port.connections.clear()
+            if scene:
+                scene.removeItem(self.output_port)
             self.output_port = None
 
         # Set current configuration

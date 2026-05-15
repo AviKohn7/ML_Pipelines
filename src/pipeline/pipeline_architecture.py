@@ -386,5 +386,3 @@ class RegistrationModule(Module):
 # Register modules for the UI
 add_module("Sources", FolderSource)
 add_module("Sources", ImageFolderSource)
-add_module("Segmentation", SegmentModule)
-add_module("Registration", RegistrationModule)

@@ -72,7 +72,8 @@ class PortItem(QGraphicsPathItem):
 
 class ModuleItem(QGraphicsRectItem):
     def __init__(self, module_class: Type[Module], x=0, y=0, width=150, height=100):
-        super().__init__(x, y, width, height)
+        super().__init__(0, 0, width, height) # Initialize rect at (0,0) within the item's local coordinates
+        self.setPos(x, y) # Set the item's position in the scene
         self.setBrush(QBrush(QColor("lightblue")))
         self.setPen(QPen(Qt.GlobalColor.black))
         self.setFlags(QGraphicsRectItem.GraphicsItemFlag.ItemIsMovable |

@@ -50,10 +50,7 @@ class DropEnabledGraphicsView(QGraphicsView):
                     break
 
             if module_class:
-                pos = event.position().toPoint()
-                if not self.viewport().rect().contains(pos):
-                    pos = self.viewport().mapFromGlobal(event.globalPosition().toPoint())
-                scene_pos = self.mapToScene(pos)
+                scene_pos = self.mapToScene(event.position().toPoint())
                 event.setDropAction(Qt.DropAction.CopyAction)
                 self.main_window._add_module(module_class, scene_pos)
                 event.acceptProposedAction()
@@ -64,17 +61,9 @@ class DropEnabledGraphicsView(QGraphicsView):
         else:
             event.ignore()
 
-    def viewportEvent(self, event):
-        if event.type() == QEvent.Type.DragEnter:
-            self.dragEnterEvent(event)
-            return True
-        if event.type() == QEvent.Type.DragMove:
-            self.dragMoveEvent(event)
-            return True
-        if event.type() == QEvent.Type.Drop:
-            self.dropEvent(event)
-            return True
-        return super().viewportEvent(event)
+    # Removed redundant viewportEvent override.
+    # dragEnterEvent, dragMoveEvent, and dropEvent are handled directly by Qt's event system
+    # when setAcceptDrops(True) is enabled on the QGraphicsView.
 
 class MainWindow(QMainWindow):
     _dock_minimized_width = 24
@@ -167,9 +156,9 @@ class MainWindow(QMainWindow):
         self._collapsed_title_bar = QWidget()
         self._collapsed_title_bar.setFixedSize(self._dock_minimized_width, 12)
         self._collapsed_title_bar.setStyleSheet("""
-            background: #DDDDDD;
             border: none;
         """)
+
         self._module_panel_collapsed_width = self._dock_minimized_width
         self._module_panel_expanded_width = self._dock_expanded_width
         self._module_panel_minimized = False
@@ -296,7 +285,12 @@ class MainWindow(QMainWindow):
     def _add_module(self, module_class, pos):
         # Instantiate the module class passed from the drag event
         try:
-            module = ModuleItem(module_class, pos.x(), pos.y())
+            # Calculate adjusted position to center the module
+            module_width = 150 # Default width of ModuleItem
+            module_height = 100 # Default height of ModuleItem
+            centered_x = pos.x() - (module_width / 2)
+            centered_y = pos.y() - (module_height / 2)
+            module = ModuleItem(module_class, centered_x, centered_y)
             module.setBrush(QBrush(QColor(self.settings["default_module_color"])))
             self.scene.addItem(module)
         except Exception as e:

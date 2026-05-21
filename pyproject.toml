@@ -5,8 +5,10 @@ requires-python = ">=3.11"
 dependencies = [
     "itk",
     "LongiSeg @ git+https://github.com/MIC-DKFZ/LongiSeg.git",
-    "PyQt6"
+    "PyQt6",
+    "dearpygui"
 ]
 
 [project.scripts]
 track = "src.track:main"
+gui = "src.gui.app:main"

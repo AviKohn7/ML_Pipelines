@@ -108,7 +108,7 @@ class DraggableModulePreview(QWidget):
         if event.buttons() == Qt.MouseButton.LeftButton and hasattr(self, 'drag_start_position') and (event.pos() - self.drag_start_position).manhattanLength() > QApplication.startDragDistance():
             drag = QDrag(self)
             mime_data = QMimeData()
-            mime_data.setText(f"module_drag:{self.module_class.__name__}")
+            mime_data.setText(f"module_drag:{self.module_class.__name__}:{self.drag_start_position.x()}:{self.drag_start_position.y()}")
 
             pixmap = QPixmap(self.size())
             pixmap.fill(Qt.GlobalColor.transparent)

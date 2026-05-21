@@ -37,7 +37,15 @@ class DropEnabledGraphicsView(QGraphicsView):
     def dropEvent(self, event):
         if event.mimeData().hasText() and event.mimeData().text().startswith("module_drag:"):
             mime_data_text = event.mimeData().text()
-            module_class_name = mime_data_text.split(':', 1)[1]
+            parts = mime_data_text.split(':')
+            if len(parts) == 4: # Expecting "module_drag:ModuleName:grab_x:grab_y"
+                module_class_name = parts[1]
+                grab_x = int(parts[2])
+                grab_y = int(parts[3])
+            else: # Fallback for old format or unexpected data
+                module_class_name = mime_data_text.split(':', 1)[1]
+                grab_x = 0 # Default to top-left if grab location not provided
+                grab_y = 0 # Default to top-left if grab location not provided
 
             # Find the actual module class from the global 'modules' dictionary
             module_class = None
@@ -51,8 +59,14 @@ class DropEnabledGraphicsView(QGraphicsView):
 
             if module_class:
                 scene_pos = self.mapToScene(event.position().toPoint())
+                
+                # Adjust scene_pos by subtracting the grab offset
+                adjusted_scene_x = scene_pos.x() - grab_x
+                adjusted_scene_y = scene_pos.y() - grab_y
+                adjusted_scene_pos = QPointF(adjusted_scene_x, adjusted_scene_y)
+
                 event.setDropAction(Qt.DropAction.CopyAction)
-                self.main_window._add_module(module_class, scene_pos)
+                self.main_window._add_module(module_class, adjusted_scene_pos)
                 event.acceptProposedAction()
                 event.accept()
             else:
@@ -285,12 +299,9 @@ class MainWindow(QMainWindow):
     def _add_module(self, module_class, pos):
         # Instantiate the module class passed from the drag event
         try:
-            # Calculate adjusted position to center the module
-            module_width = 150 # Default width of ModuleItem
-            module_height = 100 # Default height of ModuleItem
-            centered_x = pos.x() - (module_width / 2)
-            centered_y = pos.y() - (module_height / 2)
-            module = ModuleItem(module_class, centered_x, centered_y)
+            # The 'pos' argument is now the adjusted scene position,
+            # taking into account the grab location.
+            module = ModuleItem(module_class, pos.x(), pos.y())
             module.setBrush(QBrush(QColor(self.settings["default_module_color"])))
             self.scene.addItem(module)
         except Exception as e:

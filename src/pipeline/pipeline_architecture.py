@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from argparse import Namespace
 from collections import defaultdict, deque
+import functools
 from shlex import shlex
 from typing import Union, Optional, Type, Any, get_origin
 from uuid import uuid4
 
 from .pipeline_util import *
+from .pipeline_settings import get_final_output_folder, get_module_folder, get_temp_folder, set_global_settings
 from src.pipeline.data_types import Regex
 from src.util import regex_arg, path_arg
 from contextvars import ContextVar
@@ -22,13 +24,6 @@ import subprocess
 string_mappers = {
     Path: path_arg
 }
-
-GLOBAL_SETTINGS = ContextVar("Settings") #this allows for scalability and future multithreading
-GLOBAL_SETTINGS.set({
-    "final_output_folder": None, #where the final output is returned
-    "module_output_folder": None, #where the result of each module's output is returned
-    "temp_output_folder": None #for any temporary output needed during calculation
-})
 
 modules = defaultdict(list)
 def add_module(section, cls):
@@ -102,10 +97,10 @@ class Module:
 
 
     def _module_folder(self) -> Path:
-        return GLOBAL_SETTINGS.get()["module_output_folder"]
+        return get_module_folder()
 
     def _temp_folder(self) -> Path:
-        return GLOBAL_SETTINGS.get()["temp_output_folder"]
+        return get_temp_folder()
 
     @property
     def name(self):
@@ -187,9 +182,9 @@ class Pipeline:
         if len(self.sources) == 0:
             raise ValueError("Must be at least one source. Also, bug in DFS code or source adding code bc this should have been caught")
 
-        output_folder = GLOBAL_SETTINGS.get()["final_output_folder"]
-        module_output_folder = GLOBAL_SETTINGS.get()["module_output_folder"]
-        temp_output_folder = GLOBAL_SETTINGS.get()["temp_output_folder"]
+        output_folder = get_final_output_folder()
+        module_output_folder = get_module_folder()
+        temp_output_folder = get_temp_folder()
 
         if output_folder is None or module_output_folder is None or temp_output_folder is None:
             raise ValueError("Output folder, module output folder, or temp folder are not set")
@@ -220,11 +215,11 @@ class Pipeline:
 
     def _run_configuration(self, node: Configuration, input_values: List[DataTransport], output_folder: Path, module_output_folder: Path, temp_output_folder: Path):
         folders = output_folder / node.id, module_output_folder / node.id, temp_output_folder / node.id
-        GLOBAL_SETTINGS.set({
-            "final_output_folder": folders[0],
-            "module_output_folder": folders[1],
-            "temp_output_folder": folders[2],
-        })
+        set_global_settings(
+            final_output_folder = folders[0],
+            module_output_folder = folders[1],
+            temp_output_folder = folders[2],
+        )
         for p in folders[1:]:
             p.mkdir(parents=True, exist_ok=True)
         result = node.function(*input_values) #assume input validation is already done when creating pipeline,
@@ -233,6 +228,12 @@ class Pipeline:
         for p in folders[1:]:
             if not any(p.iterdir()):
                 p.rmdir()
+
+        set_global_settings(
+            final_output_folder = output_folder,
+            module_output_folder = module_output_folder,
+            temp_output_folder = temp_output_folder,
+        )
 
         return result
 
@@ -246,13 +247,15 @@ class FolderSource(Source):
     def __init__(self):
         super().__init__("Source")
         self._add_config_options(folder = Path,
-                                 filter_by = regex_arg,
+                                 filter_path_by = regex_arg,
                                  sort_by = regex_arg,
                                  extensions = List)
     def get_data(self) -> DataTransport:
         if self.config.folder is None:
             raise ConfigError("Must include data folder")
-        transport = FolderDataTransport(True, Path(self.config.folder), extensions=self.config.extensions)
+        
+        filter_func = functools.partial(re.fullmatch, self.config.filter_path_by) if self.config.filter_path_by is not None else None
+        transport = FolderDataTransport(True, Path(self.config.folder), filter=filter_func, extensions=self.config.extensions)
         try:
             return transport.sorted(lambda x: int(re.search(self.config.sort_by, str(x)).group()))
         except Exception as e:
@@ -264,14 +267,15 @@ class ImageFolderSource(Source):
     def __init__(self):
         super().__init__("Source")
         self._add_config_options(folder = Path,
-                                 filter_by = regex_arg,
+                                 filter_path_by = regex_arg,
                                  sort_by = regex_arg,
                                  extensions = List)
 
     def get_data(self) -> ImageDataTransport:
         if self.config.folder is None:
             raise ConfigError("Must include data folder")
-        transport = ImageFolderTransport(True, Path(self.config.folder), extensions=self.config.extensions)
+        filter_func = functools.partial(re.fullmatch, self.config.filter_path_by) if self.config.filter_path_by is not None else None
+        transport = ImageFolderTransport(True, Path(self.config.folder), filter=filter_func, extensions=self.config.extensions)
         try:
             return transport.sorted(lambda x: int(re.search(self.config.sort_by, str(x)).group()))
         except Exception as e:

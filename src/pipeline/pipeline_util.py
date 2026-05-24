@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from uuid import uuid4
 import warnings
 from typing import List, Set, Callable, Tuple, Generator
 from pathlib import Path
@@ -11,6 +12,8 @@ import numpy as np
 from PIL import Image
 from numpy.typing import NDArray
 import nibabel as nib
+
+from .pipeline_settings import get_temp_folder
 
 FOLDER_SEPARATOR = "__--__"
 DEFAULT_IMAGE_EXTENSIONS = set({".nii", ".nii.gz", ".mha", ".mhd", ".nrrd", ".png", ".jpg", ".tif", ".tiff"})
@@ -102,6 +105,11 @@ class DataTransport:
     def get_image_from_file(image_path) -> NDArray:
         img = itk.imread(image_path)
         return  itk.array_from_image(img)
+    
+    def get_mock_folder_path(self) -> Path:
+        folder = get_temp_folder() / str(uuid4())
+        folder.mkdir(parents=True, exist_ok=False)
+        return folder
 
 @dataclass
 class ImageMetadata:
@@ -152,13 +160,18 @@ class ImageDataTransport(DataTransport):
 
         itk.imwrite(new_img, path)
 
+def true_predicate(x):
+    return True
+
 class FolderDataTransport(DataTransport):
-    def __init__(self, is_user_input: bool, folder_path: Path, extensions: Set[str] = None, structure_of: DataTransport =None):
+    def __init__(self, is_user_input: bool, folder_path: Path, extensions: Set[str] = None, structure_of: DataTransport = None, filter: Callable[[str], bool] = None):
         super().__init__(is_user_input)
         if not folder_path.is_dir():
             raise ValueError("FolderDataTransport requires an existing folder as input")
         self.folder_path = folder_path
         self.extensions = extensions
+        self.filter = filter or true_predicate
+        self.mock_folder_path = None
         self.structure = Structure()
         self.structure.add_directory(self.folder_path, DEFAULT_IMAGE_EXTENSIONS)
         if structure_of is not None:
@@ -174,13 +187,23 @@ class FolderDataTransport(DataTransport):
 
     def get_file_paths(self) -> List[Path]:
         paths = [p for p in Path(self.folder_path).rglob("*")
-                 if p.is_file() and (self.extensions is None or p.name.lower().endswith(tuple(self.extensions)))]
+                 if p.is_file() and (self.extensions is None or p.name.lower().endswith(tuple(self.extensions))) and self.filter(str(p))]
         paths.sort(key=lambda p: self.structure.sort_extractor(p.relative_to(self.folder_path)))
         return paths
 
     def get_folder_path(self) -> Path:
-        return self.folder_path #todo: folder can't match structure. Fine?
-
+        if self.filter == true_predicate and self.extensions is None:
+            return self.folder_path
+        else:
+            if self.mock_folder_path is None:
+                self.mock_folder_path = self.get_mock_folder_path()
+                for path in self.get_file_paths():
+                    relative_path = path.relative_to(self.folder_path)
+                    mock_path = self.mock_folder_path / relative_path
+                    mock_path.parent.mkdir(parents=True, exist_ok=True)
+                    mock_path.hardlink_to(path) #use a link instead of copying to save space and time. Change if problem?
+            return self.mock_folder_path
+        
     def get_structure(self) -> Structure:
         return self.structure
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from argparse import Namespace
 from collections import defaultdict, deque
+from shlex import shlex
 from typing import Union, Optional, Type, Any, get_origin
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ from .pipeline_util import *
 from src.pipeline.data_types import Regex
 from src.util import regex_arg, path_arg
 from contextvars import ContextVar
+import subprocess
 
 #todo: add a structure object representing the required folder structure of the DataTransport, including file exts allowed
 #todo: add required config option
@@ -48,6 +50,7 @@ class Configuration:
 class ConfigError(ValueError):
     def __init__(self, message: str):
         super().__init__(message)
+
 class Module:
     def __init__(self, name):
         self.uuid = uuid4()
@@ -69,6 +72,9 @@ class Module:
         return Configuration(name, function, self, *input_types,
                              output_type=output, **irrelevant_config)
 
+
+    def get_config(self, name: str):
+        return getattr(self.config, name)
 
     def set_config(self, **kwargs):
         for key, value in kwargs.items():
@@ -382,6 +388,85 @@ class RegistrationModule(Module):
             self.create_configuration("Register with other image", self.register_with_given, Union[Path, str], ImageDataTransport,
                           Union[Path, str, None], Optional[ImageDataTransport], output=ImageDataTransport),
         ]
+
+string_mappers = {
+    "default": lambda rep, value: f"{rep} {value}",
+    "include": lambda rep, value: f"{rep} {value}" if value else "",
+}
+class StoreTrueType:
+    ...
+
+class CommandModule(Module):
+    def __init__(self, command: str = None):
+        super().__init__("Command")
+        self.fixed_args = {}
+        self.other_args = {}
+        self.command = command
+
+    def add_other_args(self, *args: Tuple[str, type, str, bool, bool]):
+        for name, dtype, representation, required, add_to_config in args:
+            self.add_other_arg(name, dtype, representation, required, add_to_config)
+    
+    def add_fixed_arg(self, name: str, dtype: type, add_to_config = False):
+        self.fixed_args[name] = (dtype, add_to_config)
+        if add_to_config: 
+            self._add_config_options(**{ name: dtype })
+
+    def add_other_arg(self, name: str, dtype: type, representation: str, required: bool = True, add_to_config: bool = True):
+        self.other_args[name] = (dtype, representation, add_to_config, required)
+        if add_to_config:
+            self._add_config_options(**{ name: dtype })
+
+    def get_input_values_by_name(self, *inputs: DataTransport) -> Tuple[dict[str, Any], dict[str, Any]]:
+        ...
+
+    #Maybe don't return?
+    def execute_command(self, return_type: type[DataTransport], input_to_copy: DataTransport, other_inputs: DataTransport) -> DataTransport:
+        command = self.get_command(input_to_copy, other_inputs)
+        folder_path = self.get_output_folder(input_to_copy, other_inputs)
+        if type(command) == str:
+            command = shlex.split(command)
+        subprocess.run(command, shell=True)
+        return return_type(False, folder_path, structure_of=input_to_copy)
+    
+    def get_command(self, *inputs: DataTransport) -> str | List[str]:
+        if self.command is None:
+            raise TypeError("Command not set")
+        fixed_values, other_values = self._fill_arguments(*inputs)
+        command = [self.command, *[value for value in fixed_values],
+                                      [self.stringify_representation(rep, value, stringify_type) for rep, (value, stringify_type) in other_values.items()]]
+        return command
+    
+    def _fill_arguments(self, *inputs: DataTransport):
+        fixed_values, other_values = {}, {}
+        input_fixed_vals, input_other_vals = self.get_input_values_by_name(*inputs)
+        for name, (_, add_to_config) in self.fixed_args.items():
+            fixed_values[name] = getattr(self.config, name) if add_to_config else input_fixed_vals[name]
+
+            if fixed_values[name] is None:
+                ErrorType = ConfigError if add_to_config else ValueError
+                raise ErrorType(f"{"Config" if add_to_config else "Input-based"} option {name} must be set for the command module to run")
+        
+        for name, (dtype, representation, add_to_config, required) in self.other_args.items():
+            val = getattr(self.config, name) if add_to_config else input_other_vals[name]
+
+            if val is not None:
+                other_values[representation] = (val, "include" if dtype == StoreTrueType else "default")
+            elif required:
+                ErrorType = ConfigError if add_to_config else ValueError
+                raise ErrorType(f"{"Config" if add_to_config else "Input-based"} option {name} must be set for the command module to run")
+        
+        return fixed_values, other_values
+        
+    def stringify_representation(self, representation: str, value: str, stringify_type: type) -> str:
+        if stringify_type in string_mappers:
+            return string_mappers[stringify_type](representation, value)
+        else:
+            return representation + " " + value
+
+    def get_output_folder(self, *inputs: DataTransport) -> Path | str:
+        return self._module_folder()
+
 
 # Register modules for the UI
 add_module("Sources", FolderSource)

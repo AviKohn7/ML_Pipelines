@@ -115,6 +115,30 @@ class LongiSegSegmentModule(SegmentModule):
 
 add_module("Segmentation", LongiSegSegmentModule)
 
+def NNUNetSegmentModule(CommandModule, SegmentModule):
+    def __init__(self):
+        super().__init__("nnUNet_predict")
+        self.name = "nnUNet Segment"
+
+        self.add_other_args(("Input", Path, "-i", True, False),
+                            ("Output", Path, "-o", True, False),
+                            ("Dataset_id", str, "--task_name", True, True),
+                            ("Trainer", str, "-tr", True, True),
+                            ("Model", value_set_arg("2d,3d_lowres,3d_fullres,3d_cascade_fullres".split(",")), "-m", True, True),
+                            ("Folds", str, "-f", False, True),
+                            ("Disable_TTA", StoreTrueType, "--disable_tta", False, True))
+    
+    def get_input_values_by_name(self, *inputs: ImageDataTransport) -> Tuple[dict[str, Any], dict[str, Any]]:
+        vals = {}
+        input_folder = inputs[0].get_folder_path()
+        vals["Input"] = input_folder
+        vals["Output"] = self.get_folder_path()
+
+        return {}, vals
+    
+    def segment(self, segmentations: ImageDataTransport) -> ImageDataTransport:
+        return self.execute_command(ImageFolderTransport, segmentations, None)
+
 #todo: add option for parameter file
 class ITKRegistrationModule(RegistrationModule):
     def __init__(self):

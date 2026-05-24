@@ -302,11 +302,6 @@ def main():
         with dpg.node_editor(callback=link_callback, delink_callback=delink_callback, tag="node_editor", width=-1, height=-1):
             pass
     
-    # Create handler registry as a top-level item
-    with dpg.handler_registry(tag="node_editor_handlers"):
-        dpg.add_mouse_drag_handler(button=dpg.mvMouseButton_Middle, callback=_node_editor_mouse_drag_handler)
-        dpg.add_mouse_release_handler(button=dpg.mvMouseButton_Middle, callback=_node_editor_mouse_release_handler)
-    
     # Call resize callback once to set initial sizes and positions
     _resize_callback(None, None)
 
